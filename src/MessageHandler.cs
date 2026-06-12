@@ -1,4 +1,4 @@
-﻿namespace RollCallBot
+namespace RollCallBot
 {
     using System;
     using System.Collections.Generic;
@@ -54,10 +54,11 @@
                 await _logger.Log(new LogMessage(LogSeverity.Error, nameof(MessageHandler), x.Exception.Message, x.Exception));
         }
 
-        private async Task _ReactionRemovedAsync(Cacheable<IUserMessage, ulong> cacheableMessage, ISocketMessageChannel channel, SocketReaction reaction)
+        private async Task _ReactionRemovedAsync(Cacheable<IUserMessage, ulong> cacheableMessage,
+            ISocketMessageChannel channel, SocketReaction reaction)
         {
             await _logger.Log(new LogMessage(LogSeverity.Debug, nameof(MessageHandler), $"Reaction Removed: UserId={reaction.UserId} MessageId={cacheableMessage.Id} ChannelId={channel.Id} Emote={reaction.Emote.Name}"));
-                    
+            
             if (reaction.UserId == _client.CurrentUser.Id)
                 return;
             var message = await cacheableMessage.GetOrDownloadAsync();
@@ -68,16 +69,18 @@
                 m = new Message(message);
                 Messages.Add(m);
             }
-        
-                m.Remove(reaction.User.Value, reaction.Emote.Name);
-                await m.UpdateAsync(message);
-            }
-        
-            private async Task _ReactionAddedAsync(
-            Cacheable<IUserMessage, ulong> cacheableMessage,
-            ISocketMessageChannel channel,
-            SocketReaction reaction)
-            {
+
+            m.Remove(reaction.User.Value, reaction.Emote.Name);
+            await m.UpdateAsync(message);
+        }
+
+        public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> cacheableMessage, ISocketMessageChannel channel, SocketReaction reaction)
+        {
+            await _ReactionAddedAsync(cacheableMessage, channel, reaction).ContinueWith(LogException).ConfigureAwait(false);
+        }
+
+        private async Task _ReactionAddedAsync(Cacheable<IUserMessage, ulong> cacheableMessage, ISocketMessageChannel channel, SocketReaction reaction)
+        {
             await _logger.Log(new LogMessage(
                 LogSeverity.Debug,
                 nameof(MessageHandler),
@@ -106,7 +109,7 @@
                 Messages.Add(m);
             }
         
-            // Mutually Exclusive Reactions
+            // ⭐ MUTUALLY EXCLUSIVE REACTIONS ⭐
             foreach (var option in m.VotingOptions)
             {
                 if (option.emote != reaction.Emote.Name)
@@ -124,6 +127,7 @@
             // Rebuild the embed
             await m.UpdateAsync(message);
         }
+
 
         public async Task HandleCommandAsync(SocketMessage arg)
         {
