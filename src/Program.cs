@@ -14,6 +14,24 @@
         /// <summary>Program entry point</summary>
         public static async Task Main(string[] args)
         {
+            // Dummy HTTP server for Render
+            _ = Task.Run(async () =>
+            {
+                var listener = new HttpListener();
+                listener.Prefixes.Add("http://0.0.0.0:10000/");
+                listener.Start();
+            
+                while (true)
+                {
+                    var ctx = await listener.GetContextAsync();
+                    var buffer = System.Text.Encoding.UTF8.GetBytes("OK");
+                    ctx.Response.ContentLength64 = buffer.Length;
+                    await ctx.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    ctx.Response.OutputStream.Close();
+                }
+            });
+
+            
             var services = ConfigureServices();
             var program = services.GetService<Program>();
             await program.MainAsync(args);
