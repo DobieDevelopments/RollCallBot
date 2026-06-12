@@ -13,7 +13,7 @@ namespace RollCallBot
         public IUserMessage userMessage { get; private set; }
         private IEmbed embed;
 
-        // Voting option struct must be PUBLIC
+        // Public so MessageHandler can access it
         public struct VotingOption
         {
             public string emote;
@@ -33,7 +33,7 @@ namespace RollCallBot
             }
         }
 
-        // Must be public so MessageHandler can read it
+        // Public so handler can iterate
         public List<VotingOption> VotingOptions = new();
 
         private string description;
@@ -54,7 +54,7 @@ namespace RollCallBot
         {
             this.userMessage = userMessage;
 
-            // FIX: ensure guild is always set
+            // Ensure guild is always set
             guild = (userMessage.Channel as SocketGuildChannel)?.Guild;
 
             embed = userMessage.Embeds.First();
@@ -93,7 +93,7 @@ namespace RollCallBot
             }
         }
 
-        // Remove user from all options (mutually exclusive)
+        // Mutually exclusive: remove user from all options
         private void RemoveUserFromAllOptions(IUser user)
         {
             foreach (var option in VotingOptions)
@@ -105,8 +105,10 @@ namespace RollCallBot
             if (user.IsBot)
                 return;
 
-            // FIX: ensure guild is always set
-            guild ??= (userMessage.Channel as SocketGuildChannel)?.Guild;
+            // ⭐ FIX: ensure guild is ALWAYS set, even before Send()
+            guild ??=
+                (userMessage?.Channel as SocketGuildChannel)?.Guild ??
+                (user as SocketGuildUser)?.Guild;
 
             // Mutually exclusive: remove from all first
             RemoveUserFromAllOptions(user);
