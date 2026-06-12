@@ -5,8 +5,8 @@ WORKDIR /app
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
 
-# Runtime stage
-FROM mcr.microsoft.com/dotnet/runtime:8.0
+# Runtime stage (ASP.NET runtime, not plain runtime)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
