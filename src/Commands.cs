@@ -23,7 +23,8 @@
         public async Task ReactAsync([Remainder] string description)
         {
             await _logger.Log(new LogMessage(LogSeverity.Info, nameof(Commands), $"New Roll Call: {description}"));
-            var emoji = new Emoji("\uD83D\uDC4C");   // equivalent to "👌"
+            var emoji = Emote.Parse("<:mikuhappy:1514886447268888707>");
+            //var emoji = new Emoji("\uD83D\uDC4C");   // equivalent to "👌"
             
             await Context.Message.AddReactionAsync(emoji);
             // var message = new Message(description);
