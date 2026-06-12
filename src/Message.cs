@@ -78,17 +78,28 @@
             }
         }
 
+        //remove user from all already selected reactions
+        private void RemoveUserFromAllOptions(IUser user)
+        {
+            foreach (var option in VotingOptions)
+                option.users.RemoveAll(u => u.Id == user.Id);
+        }
+
         public void Add(IUser user, string emote)
         {
-            if(user.IsBot)
-                return; // fast exit
-
+            if (user.IsBot)
+                return;
+        
             guild ??= (userMessage.Channel as SocketGuildChannel)?.Guild;
+        
+            // Remove user from all other options first
+            RemoveUserFromAllOptions(user);
+        
+            // Add to the selected option
             var users = FindCorrectUserList(emote);
-            //if(users == null || users.Exists(x => x.Id == user.Id))
-            //    return; // user already in list
             users.Add(user);
         }
+
 
         private List<IUser> FindCorrectUserList(string emote)
         {
