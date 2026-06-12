@@ -12,26 +12,18 @@
     {
         public  IUserMessage userMessage { get; private set; }
         private IEmbed embed;
-        private struct VotingOption
+        public struct VotingOption
         {
             public string emote;
             public string label;
             public List<IUser> users;
 
-            public struct VotingOption
+            public VotingOption(string emote, string label)
             {
-                public string emote;
-                public string label;
-                public List<IUser> users;
-            
-                public VotingOption(string emote, string label)
-                {
-                    this.emote = emote;
-                    this.label = label;
-                    this.users = new List<IUser>();
-                }
+                this.emote = emote;
+                this.label = label;
+                this.users = new List<IUser>();
             }
-
 
             public override string ToString()
             {
