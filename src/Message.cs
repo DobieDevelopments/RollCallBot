@@ -133,7 +133,7 @@
                 //.WithTimestamp(DateTimeOffset.Now)
                 .WithDescription(description)
                 .WithFields(embedFieldBuilders)
-                .WithFooter($"MikuRollCalling! v{Util.Version()}")
+                .WithFooter($"MikuRollCalling! v1")
                 //.WithAuthor(new EmbedAuthorBuilder().WithName($"RollCallBot v{Util.Version()}").WithUrl("https://github.com/dsheehan/RollCallBot").WithIconUrl("https://cdn.discordapp.com/embed/avatars/0.png"))
                 .Build();
         }
