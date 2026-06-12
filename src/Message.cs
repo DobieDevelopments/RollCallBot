@@ -1,4 +1,4 @@
-﻿namespace RollCallBot
+namespace RollCallBot
 {
     using System;
     using System.Collections.Generic;
@@ -7,11 +7,13 @@
     using System.Threading.Tasks;
     using Discord;
     using Discord.WebSocket;
-    
+
     public class Message
     {
-        public  IUserMessage userMessage { get; private set; }
+        public IUserMessage userMessage { get; private set; }
         private IEmbed embed;
+
+        // Voting option struct must be PUBLIC
         public struct VotingOption
         {
             public string emote;
@@ -30,26 +32,36 @@
                 return $"{emote} = {label} ({users.Count})";
             }
         }
+
+        // Must be public so MessageHandler can read it
         public List<VotingOption> VotingOptions = new();
+
         private string description;
         private SocketGuild guild;
 
+        // Constructor for NEW roll call messages
         public Message(string description)
         {
-            //this.description = description ?? "Daily 9PM Roll Call";
-            this.description = description ?? $"Roll Call started!";
-            VotingOptions.Add(new VotingOption("✅","In"));
-            VotingOptions.Add(new VotingOption("❌","Out"));
-            VotingOptions.Add(new VotingOption("❓","Maybe"));
+            this.description = description ?? "Roll Call started!";
+
+            VotingOptions.Add(new VotingOption("✅", "In"));
+            VotingOptions.Add(new VotingOption("❌", "Out"));
+            VotingOptions.Add(new VotingOption("❓", "Maybe"));
         }
 
+        // Constructor for EXISTING messages (rebuild from embed)
         public Message(IUserMessage userMessage)
         {
             this.userMessage = userMessage;
+
+            // FIX: ensure guild is always set
             guild = (userMessage.Channel as SocketGuildChannel)?.Guild;
+
             embed = userMessage.Embeds.First();
             description = embed.Description;
+
             var pattern = new Regex(@"(.*) = (.*) \((\d+)\)");
+
             foreach (var embedField in embed.Fields)
             {
                 var match = pattern.Match(embedField.Name);
@@ -60,6 +72,7 @@
                 }
             }
 
+            // Rebuild user lists from reactions
             var task = Task.Run(() => react(userMessage));
             task.Wait();
         }
@@ -68,18 +81,19 @@
         {
             foreach (var reaction in userMessage.Reactions)
             {
-                var users = userMessage.GetReactionUsersAsync(reaction.Key, 10);
-                await foreach (var user in users)
+                var users = userMessage.GetReactionUsersAsync(reaction.Key, 100);
+
+                await foreach (var batch in users)
                 {
-                    foreach (var user1 in user)
+                    foreach (var user in batch)
                     {
-                        Add(user1, reaction.Key.Name);
+                        Add(user, reaction.Key.Name);
                     }
                 }
             }
         }
 
-        //remove user from all already selected reactions
+        // Remove user from all options (mutually exclusive)
         private void RemoveUserFromAllOptions(IUser user)
         {
             foreach (var option in VotingOptions)
@@ -90,28 +104,28 @@
         {
             if (user.IsBot)
                 return;
-        
+
+            // FIX: ensure guild is always set
             guild ??= (userMessage.Channel as SocketGuildChannel)?.Guild;
-        
-            // Remove user from all other options first
+
+            // Mutually exclusive: remove from all first
             RemoveUserFromAllOptions(user);
-        
-            // Add to the selected option
+
+            // Add to selected option
             var users = FindCorrectUserList(emote);
             users.Add(user);
         }
-
 
         private List<IUser> FindCorrectUserList(string emote)
         {
             if (emote.StartsWith("au"))
             {
-                return emote.EndsWith("dead") ? VotingOptions.FirstOrDefault(x => x.label == "Out").users : VotingOptions.FirstOrDefault(x => x.label == "In").users;
+                return emote.EndsWith("dead")
+                    ? VotingOptions.First(x => x.label == "Out").users
+                    : VotingOptions.First(x => x.label == "In").users;
             }
-            else
-            {
-                return VotingOptions.FirstOrDefault(x => x.emote == emote).users;
-            }
+
+            return VotingOptions.First(x => x.emote == emote).users;
         }
 
         public void Remove(IUser user, string emote)
@@ -125,50 +139,53 @@
             var u = guild?.GetUser(user.Id);
             return u?.Nickname ?? u?.Username ?? user.Username;
         }
-        
+
         private EmbedFieldBuilder b(VotingOption votingOption)
         {
-            var inUserList = string.Join('\n', votingOption.users.Select((d, i) => $"{i+1}. {GetNickname(d)}"));
-            if (string.IsNullOrEmpty(inUserList))
-                inUserList = "1. ";
-            var inBuilder = new EmbedFieldBuilder().WithName($"{votingOption.emote} = {votingOption.label} ({votingOption.users.Count})").WithValue(inUserList).WithIsInline(true);
-            return inBuilder;
+            var list = string.Join('\n',
+                votingOption.users.Select((d, i) => $"{i + 1}. {GetNickname(d)}"));
+
+            if (string.IsNullOrEmpty(list))
+                list = "1. ";
+
+            return new EmbedFieldBuilder()
+                .WithName($"{votingOption.emote} = {votingOption.label} ({votingOption.users.Count})")
+                .WithValue(list)
+                .WithIsInline(true);
         }
+
         public Embed RebuildEmbed()
         {
-            var embedFieldBuilders = VotingOptions.Select(b);
-
+            var fields = VotingOptions.Select(b);
             var unix = userMessage?.CreatedAt.ToUnixTimeSeconds() ?? DateTimeOffset.Now.ToUnixTimeSeconds();
-            
+
             return new EmbedBuilder()
                 .WithTitle($"Roll Call – <t:{unix}:f>")
-                //.WithTitle($"Roll Call – {userMessage?.CreatedAt.LocalDateTime:MMM dd, yyyy hh:mm tt}")
-                //.WithTitle($"Roll Call {userMessage?.CreatedAt.ToLocalTime()??DateTimeOffset.Now:D}")
-                //.WithTimestamp(DateTimeOffset.Now)
                 .WithDescription(description)
-                .WithFields(embedFieldBuilders)
-                .WithFooter($"MikuRollCalling! v1")
-                //.WithAuthor(new EmbedAuthorBuilder().WithName($"RollCallBot v{Util.Version()}").WithUrl("https://github.com/dsheehan/RollCallBot").WithIconUrl("https://cdn.discordapp.com/embed/avatars/0.png"))
+                .WithFields(fields)
+                .WithFooter("MikuRollCalling! v1")
                 .Build();
         }
 
         public async Task Send(ISocketMessageChannel socketMessageChannel)
         {
-            guild = (socketMessageChannel as SocketGuildChannel).Guild;
+            guild = (socketMessageChannel as SocketGuildChannel)?.Guild;
+
             embed = RebuildEmbed();
             var msg = await socketMessageChannel.SendMessageAsync(null, false, embed as Embed);
+
             var emojis = VotingOptions.Select(x => new Emoji(x.emote) as IEmote);
             await msg.AddReactionsAsync(emojis.ToArray());
+
             userMessage = msg;
         }
 
         public async Task UpdateAsync(IUserMessage message)
         {
-            guild = (message.Channel as SocketGuildChannel).Guild;
+            guild = (message.Channel as SocketGuildChannel)?.Guild;
+
             embed = RebuildEmbed();
             await message.ModifyAsync(x => x.Embed = embed as Embed);
         }
-
-        
     }
 }
