@@ -82,7 +82,8 @@
         {
             if(user.IsBot)
                 return; // fast exit
-            
+
+            guild ??= (userMessage.Channel as SocketGuildChannel)?.Guild;
             var users = FindCorrectUserList(emote);
             //if(users == null || users.Exists(x => x.Id == user.Id))
             //    return; // user already in list
