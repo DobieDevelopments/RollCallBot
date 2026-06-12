@@ -18,19 +18,27 @@
             public string label;
             public List<IUser> users;
 
-            public VotingOption(string emote, string label)
+            public struct VotingOption
             {
-                this.emote = emote;
-                this.label = label;
-                this.users = new List<IUser>();
+                public string emote;
+                public string label;
+                public List<IUser> users;
+            
+                public VotingOption(string emote, string label)
+                {
+                    this.emote = emote;
+                    this.label = label;
+                    this.users = new List<IUser>();
+                }
             }
+
 
             public override string ToString()
             {
                 return $"{emote} = {label} ({users.Count})";
             }
         }
-        private List<VotingOption> VotingOptions = new();
+        public List<VotingOption> VotingOptions = new();
         private string description;
         private SocketGuild guild;
 
