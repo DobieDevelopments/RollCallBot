@@ -9,8 +9,9 @@
     using Discord.Commands;
     using Discord.WebSocket;
 
-    using Microsoft.AspNetCore.Builder;
-    using Microsoft.Extensions.Hosting;
+    using System.Net;
+    using System.Net.Sockets;
+    using System.Text;
 
 
     public class Program
@@ -18,16 +19,21 @@
         /// <summary>Program entry point</summary>
         public static async Task Main(string[] args)
         {
-            // Dummy HTTP server for Render (Kestrel)
-            _ = Task.Run(() =>
+            // Dummy TCP server for Render (works on .NET 5)
+            _ = Task.Run(async () =>
             {
-                var builder = WebApplication.CreateBuilder();
-                var app = builder.Build();
+                var listener = new TcpListener(IPAddress.Any, 10000);
+                listener.Start();
             
-                app.MapGet("/", () => "OK");
-            
-                app.Run("http://0.0.0.0:10000");
+                while (true)
+                {
+                    var client = await listener.AcceptTcpClientAsync();
+                    using var stream = client.GetStream();
+                    var response = Encoding.UTF8.GetBytes("OK");
+                    await stream.WriteAsync(response, 0, response.Length);
+                }
             });
+
 
 
             
