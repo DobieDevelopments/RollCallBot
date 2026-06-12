@@ -46,6 +46,7 @@
         public Message(IUserMessage userMessage)
         {
             this.userMessage = userMessage;
+            guild = (userMessage.Channel as SocketGuildChannel)?.Guild;
             embed = userMessage.Embeds.First();
             description = embed.Description;
             var pattern = new Regex(@"(.*) = (.*) \((\d+)\)");
@@ -121,9 +122,10 @@
 
         private string GetNickname(IUser user)
         {
-            var u = guild.GetUser(user.Id);
-            return u.Nickname ?? u.Username;
+            var u = guild?.GetUser(user.Id);
+            return u?.Nickname ?? u?.Username ?? user.Username;
         }
+        
         private EmbedFieldBuilder b(VotingOption votingOption)
         {
             var inUserList = string.Join('\n', votingOption.users.Select((d, i) => $"{i+1}. {GetNickname(d)}"));
