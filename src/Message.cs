@@ -36,7 +36,8 @@
 
         public Message(string description)
         {
-            this.description = description ?? "Daily 9PM Roll Call";
+            //this.description = description ?? "Daily 9PM Roll Call";
+            this.description = description ?? $"Roll Call started!";
             VotingOptions.Add(new VotingOption("✅","In"));
             VotingOptions.Add(new VotingOption("❌","Out"));
             VotingOptions.Add(new VotingOption("❓","Maybe"));
@@ -122,11 +123,17 @@
         public Embed RebuildEmbed()
         {
             var embedFieldBuilders = VotingOptions.Select(b);
+
+            var unix = userMessage?.CreatedAt.ToUnixTimeSeconds() ?? DateTimeOffset.Now.ToUnixTimeSeconds();
+            
             return new EmbedBuilder()
-                .WithTitle($"Roll Call {userMessage?.CreatedAt.ToLocalTime()??DateTimeOffset.Now:D}")
-                .WithTimestamp(DateTimeOffset.Now)
+                .WithTitle($"Roll Call – <t:{unix}:f>")
+                //.WithTitle($"Roll Call – {userMessage?.CreatedAt.LocalDateTime:MMM dd, yyyy hh:mm tt}")
+                //.WithTitle($"Roll Call {userMessage?.CreatedAt.ToLocalTime()??DateTimeOffset.Now:D}")
+                //.WithTimestamp(DateTimeOffset.Now)
                 .WithDescription(description)
                 .WithFields(embedFieldBuilders)
+                .WithFooter($"MikuRollCalling! v{Util.Version()}")
                 //.WithAuthor(new EmbedAuthorBuilder().WithName($"RollCallBot v{Util.Version()}").WithUrl("https://github.com/dsheehan/RollCallBot").WithIconUrl("https://cdn.discordapp.com/embed/avatars/0.png"))
                 .Build();
         }
