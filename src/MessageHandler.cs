@@ -74,31 +74,53 @@
             await m.UpdateAsync(message);
         }
 
-        public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> cacheableMessage, ISocketMessageChannel channel, SocketReaction reaction)
-        {
-            await _ReactionAddedAsync(cacheableMessage, channel, reaction).ContinueWith(LogException).ConfigureAwait(false);
-        }
-
         private async Task _ReactionAddedAsync(Cacheable<IUserMessage, ulong> cacheableMessage, ISocketMessageChannel channel, SocketReaction reaction)
         {
-            await _logger.Log(new LogMessage(LogSeverity.Debug, nameof(MessageHandler), $"Reaction Added: UserId={reaction.UserId} MessageId={cacheableMessage.Id} ChannelId={channel.Id} Emote={reaction.Emote.Name}"));
-            
+            await _logger.Log(new LogMessage(
+                LogSeverity.Debug,
+                nameof(MessageHandler),
+                $"Reaction Added: UserId={reaction.UserId} MessageId={cacheableMessage.Id} ChannelId={channel.Id} Emote={reaction.Emote.Name}"
+            ));
+        
+            // Ignore bot reactions
             if (reaction.UserId == _client.CurrentUser.Id)
                 return;
-
+        
             var message = await cacheableMessage.GetOrDownloadAsync();
-            if(message == null)
+            if (message == null)
                 return;
-            
+        
+            // Find or reconstruct the rollcall message
             var m = Find(cacheableMessage.Id);
             if (m == null)
             {
-                await _logger.Log(new LogMessage(LogSeverity.Debug, nameof(MessageHandler), "Reaction Added: Recreating older message"));
+                await _logger.Log(new LogMessage(
+                    LogSeverity.Debug,
+                    nameof(MessageHandler),
+                    "Reaction Added: Recreating older message"
+                ));
+        
                 m = new Message(message);
                 Messages.Add(m);
             }
-
+        
+            // MUTUALLY EXCLUSIVE REACTIONS
+            // Remove all other reactions from this user
+            foreach (var option in m.VotingOptions)
+            {
+                if (option.emote != reaction.Emote.Name)
+                {
+                    await message.RemoveReactionAsync(
+                        new Emoji(option.emote),
+                        reaction.User.Value
+                    );
+                }
+            }
+        
+            // Update internal vote state
             m.Add(reaction.User.Value, reaction.Emote.Name);
+        
+            // Rebuild the embed
             await m.UpdateAsync(message);
         }
 
